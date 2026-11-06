@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  image        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  profile      Profile?
+  projects     Project[]
+  tasks        Task[]
+  applications JobApplication[]
+  skills       Skill[]
+  learningGoals LearningGoal[]
+  activities   Activity[]
+  notifications Notification[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model Profile {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username       String?
+  bio            String?
+  university     String?
+  degree         String?
+  graduationYear Int?
+  location       String?
+  github         String?
+  linkedin       String?
+  portfolio      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  REVIEW
+  COMPLETED
+  ARCHIVED
+}
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  priority    Priority @default(MEDIUM)
+  startDate   DateTime?
+  deadline    DateTime?
+  githubUrl   String?
+  liveUrl     String?
+  progress    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  technologies ProjectTechnology[]
+  tasks       Task[]
+  activities  Activity[]
+
+  @@index([userId])
+}
+
+model Technology {
+  id       String @id @default(uuid())
+  name     String @unique
+  projects ProjectTechnology[]
+}
+
+model ProjectTechnology {
+  projectId    String
+  technologyId String
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  technology   Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, technologyId])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+model Task {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  title     String
+  description String?
+  status    TaskStatus @default(TODO)
+  priority  Priority @default(MEDIUM)
+  deadline  DateTime?
+  labels    String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([projectId])
+}
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  ASSESSMENT
+  INTERVIEW
+  TECHNICAL_INTERVIEW
+  OFFER
+  REJECTED
+}
+
+model JobApplication {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company        String
+  position       String
+  location       String?
+  jobType        String?
+  applicationDate DateTime?
+  deadline       DateTime?
+  status         ApplicationStatus @default(SAVED)
+  salary         String?
+  jobUrl         String?
+  notes          String?
+  contactPerson  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum SkillCategory {
+  PROGRAMMING
+  FRONTEND
+  BACKEND
+  DATABASE
+  DEVOPS
+  CLOUD
+  TOOLS
+  SOFT_SKILLS
+}
+
+model Skill {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  category       SkillCategory @default(PROGRAMMING)
+  proficiency    Int      @default(50)
+  yearsExperience Float?
+  lastPracticed  DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum LearningStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model LearningGoal {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal        String
+  description String?
+  category    String?
+  progress    Int      @default(0)
+  targetDate  DateTime?
+  resources   String?
+  status      LearningStatus @default(NOT_STARTED)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  milestones  LearningMilestone[]
+
+  @@index([userId])
+}
+
+model LearningMilestone {
+  id     String        @id @default(uuid())
+  goalId String
+  goal   LearningGoal  @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title  String
+  done   Boolean       @default(false)
+}
+
+enum ActivityType {
+  STUDY
+  CODING
+  PROJECT
+  LEARNING
+}
+
+model Activity {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  type      ActivityType
+  duration  Int          // minutes
+  date      DateTime     @default(now())
+  notes     String?
+  createdAt DateTime     @default(now())
+
+  @@index([userId])
+  @@index([date])
+}
+
+model Notification {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String   @default("SYSTEM")
+  title             String
+  message           String?
+  read              Boolean  @default(false)
+  relatedEntityId   String?
+  relatedEntityType String?
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, type, relatedEntityId, createdAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
